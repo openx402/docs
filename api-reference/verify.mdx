@@ -1,0 +1,246 @@
+---
+title: "/verify"
+description: "Verify payment authorization"
+---
+
+## Overview
+
+The `/verify` endpoint confirms that a payment has been authorized and is valid. Servers should call this endpoint before delivering services to ensure payment has been received.
+
+## Endpoint
+
+```
+POST https://open.x402.host/verify
+```
+
+## When to Use
+
+- **Before delivering services** - Always verify payment first
+- **Payment validation** - Confirm transaction authenticity
+- **Authorization checks** - Ensure payment meets requirements
+
+## Request
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| `Content-Type` | `application/json` | Yes |
+
+### Body Parameters
+
+| Parameter | Type | Description | Required |
+|-----------|------|-------------|----------|
+| `proof` | string | Payment authorization proof | Yes |
+| `network` | string | Blockchain network | Yes |
+| `txHash` | string | Transaction hash (optional) | No |
+
+### Example Request
+
+<CodeGroup>
+```javascript JavaScript
+const response = await fetch('https://open.x402.host/verify', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    proof: paymentProof,
+    network: 'base'
+  })
+});
+
+const result = await response.json();
+if (result.valid) {
+  // Payment is valid, deliver service
+}
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://open.x402.host/verify',
+    json={
+        'proof': payment_proof,
+        'network': 'base'
+    }
+)
+
+result = response.json()
+if result.get('valid'):
+    # Payment is valid, deliver service
+    pass
+```
+
+```bash cURL
+curl -X POST https://open.x402.host/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "proof": "payment_proof_here",
+    "network": "base"
+  }'
+```
+</CodeGroup>
+
+## Response
+
+### Success Response
+
+```json
+{
+  "valid": true,
+  "transactionId": "tx_abc123",
+  "amount": "1.00",
+  "network": "base",
+  "timestamp": 1699564800,
+  "status": "confirmed"
+}
+```
+
+### Invalid Payment Response
+
+```json
+{
+  "valid": false,
+  "error": "Payment not found",
+  "code": "PAYMENT_NOT_FOUND"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `valid` | boolean | Whether payment is valid |
+| `transactionId` | string | Unique transaction identifier |
+| `amount` | string | Payment amount in USDC |
+| `network` | string | Blockchain network used |
+| `timestamp` | number | Unix timestamp of payment |
+| `status` | string | Payment status |
+| `error` | string | Error message (if invalid) |
+| `code` | string | Error code (if invalid) |
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `PAYMENT_NOT_FOUND` | Payment proof not recognized |
+| `INSUFFICIENT_AMOUNT` | Payment amount too low |
+| `EXPIRED` | Payment authorization expired |
+| `INVALID_NETWORK` | Network not supported |
+| `ALREADY_USED` | Payment already redeemed |
+
+## Complete Integration Example
+
+```javascript
+// Express.js middleware example
+async function verifyPaymentMiddleware(req, res, next) {
+  const paymentProof = req.headers['x-402-payment'];
+
+  if (!paymentProof) {
+    return res.status(402).json({
+      error: 'Payment required',
+      facilitator: 'https://open.x402.host'
+    });
+  }
+
+  try {
+    const response = await fetch('https://open.x402.host/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proof: paymentProof,
+        network: 'base'
+      }),
+      timeout: 5000
+    });
+
+    const result = await response.json();
+
+    if (!result.valid) {
+      return res.status(402).json({
+        error: 'Invalid payment',
+        details: result.error
+      });
+    }
+
+    // Store transaction info for settlement
+    req.paymentInfo = {
+      transactionId: result.transactionId,
+      amount: result.amount,
+      network: result.network
+    };
+
+    next(); // Payment verified, proceed
+
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    return res.status(500).json({
+      error: 'Payment verification failed'
+    });
+  }
+}
+
+// Use in your routes
+app.post('/api/premium-data', verifyPaymentMiddleware, (req, res) => {
+  // Payment is verified, deliver content
+  res.json({
+    data: 'Your premium content',
+    transactionId: req.paymentInfo.transactionId
+  });
+});
+```
+
+## Best Practices
+
+1. **Always verify before delivery** - Never trust client-side payment claims
+2. **Cache verification results** - Avoid redundant API calls
+3. **Set timeouts** - Don't let verification hang
+4. **Log all attempts** - Track payment attempts for debugging
+5. **Handle errors gracefully** - Provide clear feedback
+
+## Caching Verifications
+
+```javascript
+const verificationCache = new Map();
+const CACHE_TTL = 60000; // 1 minute
+
+async function verifyWithCache(proof, network) {
+  const cacheKey = `${network}:${proof}`;
+
+  // Check cache
+  const cached = verificationCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.result;
+  }
+
+  // Verify with API
+  const result = await fetch('https://open.x402.host/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof, network })
+  }).then(r => r.json());
+
+  // Cache result
+  verificationCache.set(cacheKey, {
+    result,
+    timestamp: Date.now()
+  });
+
+  return result;
+}
+```
+
+## Rate Limiting
+
+- **500 requests per minute** per IP
+- Use caching to reduce API calls
+- Exceeding limits returns `429 Too Many Requests`
+
+## Related Endpoints
+
+- [/settle](/api-reference/settle) - Finalize transaction settlement
+- [/open](/api-reference/open) - Production payment endpoint
+- [/test](/api-reference/test) - Development endpoint
+- [/supported](/api-reference/supported) - Check supported networks

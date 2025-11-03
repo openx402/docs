@@ -1,0 +1,266 @@
+---
+title: "BNB Smart Chain (BSC)"
+description: "OpenX402 facilitator guide for BNB Smart Chain"
+---
+
+## Overview
+
+BNB Smart Chain (BSC) is Binance's high-performance blockchain with low fees and fast transactions. With strong integration into the Binance ecosystem, it offers excellent liquidity and user access.
+
+## Facilitator URL
+
+```
+https://openx402.ai/bsc
+```
+
+## Network Details
+
+| Property | Value |
+|----------|-------|
+| **Chain ID** | 56 |
+| **RPC URL** | https://bsc-dataseed.binance.org |
+| **Native Token** | BNB |
+| **Payment Token** | USDC |
+| **Block Time** | ~3 seconds |
+| **Transaction Cost** | ~$0.03 |
+| **Status** | ✅ Production |
+
+## Why BSC?
+
+<CardGroup cols={2}>
+  <Card title="Binance Ecosystem" icon="building">
+    Direct access to Binance exchange liquidity
+  </Card>
+  <Card title="Low Fees" icon="dollar-sign">
+    Cost-effective transactions
+  </Card>
+  <Card title="EVM Compatible" icon="code">
+    Full Ethereum tooling support
+  </Card>
+  <Card title="Large User Base" icon="users">
+    Access to millions of Binance users
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+### 1. Install Dependencies
+
+<CodeGroup>
+```bash npm
+npm install ethers @openzeppelin/contracts
+```
+
+```bash yarn
+yarn add ethers @openzeppelin/contracts
+```
+</CodeGroup>
+
+### 2. Configure Network
+
+```javascript
+const bscConfig = {
+  chainId: 56,
+  name: 'BNB Smart Chain',
+  rpcUrl: 'https://bsc-dataseed.binance.org',
+  facilitatorUrl: 'https://openx402.ai/bsc',
+  usdcAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d'
+};
+```
+
+### 3. Create Payment
+
+```javascript
+import { ethers } from 'ethers';
+
+async function createBSCPayment(amount, recipient) {
+  const provider = new ethers.JsonRpcProvider(bscConfig.rpcUrl);
+  const signer = new ethers.Wallet(privateKey, provider);
+
+  // USDC contract on BSC
+  const usdc = new ethers.Contract(
+    bscConfig.usdcAddress,
+    ['function transfer(address to, uint256 amount)'],
+    signer
+  );
+
+  // Send payment
+  const tx = await usdc.transfer(
+    recipient,
+    ethers.parseUnits(amount.toString(), 18) // BSC USDC has 18 decimals
+  );
+
+  await tx.wait();
+  return tx.hash;
+}
+```
+
+### 4. Verify with Facilitator
+
+```javascript
+async function verifyBSCPayment(txHash) {
+  const response = await fetch('https://openx402.ai/bsc/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      txHash: txHash,
+      network: 'bsc'
+    })
+  });
+
+  return await response.json();
+}
+```
+
+## Starter Repository
+
+Get started quickly with our BSC starter template:
+
+```bash
+git clone https://github.com/openx402/bsc-starter
+cd bsc-starter
+npm install
+npm run dev
+```
+
+<Card title="BSC Starter Repo" icon="github" href="https://github.com/openx402/bsc-starter">
+  Complete example application with BSC integration
+</Card>
+
+## Server-Side Integration
+
+### Express.js Example
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.post('/api/premium', async (req, res) => {
+  const { txHash } = req.body;
+
+  // Verify payment through BSC facilitator
+  const verification = await fetch('https://openx402.ai/bsc/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      txHash,
+      network: 'bsc',
+      expectedAmount: '1.00' // 1 USDC
+    })
+  }).then(r => r.json());
+
+  if (!verification.valid) {
+    return res.status(402).json({ error: 'Payment required' });
+  }
+
+  // Payment verified - deliver service
+  res.json({
+    data: 'Your premium content',
+    transactionId: verification.transactionId
+  });
+});
+
+app.listen(3000);
+```
+
+## Testing
+
+Use BSC Testnet for development:
+
+```javascript
+const bscTestnetConfig = {
+  chainId: 97,
+  name: 'BSC Testnet',
+  rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
+  facilitatorUrl: 'https://openx402.ai/bsc/test',
+  usdcAddress: '0x...' // Testnet USDC address
+};
+```
+
+Get testnet BNB from [BNB Chain Testnet Faucet](https://www.bnbchain.org/en/testnet-faucet).
+
+## Endpoints
+
+| Endpoint | Purpose | Cost |
+|----------|---------|------|
+| `/open` | Production payments | $1 USDC |
+| `/test` | Development testing | $0.0001 USDC |
+| `/verify` | Payment verification | Free |
+| `/settle` | Settlement finalization | Free |
+| `/supported` | Network info | Free |
+
+## Adding BSC to MetaMask
+
+```javascript
+async function addBSCToMetaMask() {
+  try {
+    await window.ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{
+        chainId: '0x38', // 56 in hex
+        chainName: 'BNB Smart Chain',
+        nativeCurrency: {
+          name: 'BNB',
+          symbol: 'BNB',
+          decimals: 18
+        },
+        rpcUrls: ['https://bsc-dataseed.binance.org'],
+        blockExplorerUrls: ['https://bscscan.com']
+      }]
+    });
+  } catch (error) {
+    console.error('Failed to add BSC:', error);
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Gas Optimization">
+    - Keep BNB for gas payments
+    - Set appropriate gas limits
+    - Monitor gas prices during peak times
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Implement retry logic for network issues
+    - Handle insufficient BNB for gas
+    - Verify transaction confirmations
+  </Accordion>
+
+  <Accordion title="Security">
+    - Never expose private keys client-side
+    - Validate all payment amounts server-side
+    - Use official RPC endpoints
+  </Accordion>
+</AccordionGroup>
+
+## Important Notes
+
+<Warning>
+  Note that USDC on BSC has **18 decimals** (unlike 6 decimals on other chains). Adjust your amount calculations accordingly.
+</Warning>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="BSC Documentation" icon="book" href="https://docs.bnbchain.org">
+    Official BSC documentation
+  </Card>
+  <Card title="BscScan" icon="magnifying-glass" href="https://bscscan.com">
+    View transactions and contracts
+  </Card>
+  <Card title="BNB Chain Bridge" icon="bridge" href="https://www.bnbchain.org/en/bridge">
+    Bridge assets to BSC
+  </Card>
+  <Card title="X402 Scan" icon="chart-line" href="https://www.x402scan.com/facilitator/openx402">
+    Monitor OpenX402 transactions
+  </Card>
+</CardGroup>
+
+## Support
+
+- **BscScan Status**: [BscScan Status Page](https://bscscan.freshstatus.io)
+- **OpenX402 Support**: [X @openx402](https://x.com/openx402)
+- **Testnet Faucet**: [BNB Chain Testnet Faucet](https://www.bnbchain.org/en/testnet-faucet)

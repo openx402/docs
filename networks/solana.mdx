@@ -1,0 +1,277 @@
+---
+title: "Solana Network"
+description: "OpenX402 facilitator guide for Solana"
+---
+
+## Overview
+
+Solana is a high-performance blockchain offering ultra-fast transactions and low costs. With sub-second finality and minimal fees, it's ideal for high-frequency micropayments.
+
+## Facilitator URL
+
+```
+https://openx402.ai/solana
+```
+
+## Network Details
+
+| Property | Value |
+|----------|-------|
+| **Network** | Solana Mainnet Beta |
+| **RPC URL** | https://api.mainnet-beta.solana.com |
+| **Native Token** | SOL |
+| **Payment Token** | USDC |
+| **Block Time** | ~400ms |
+| **Transaction Cost** | ~$0.00025 |
+| **Status** | ✅ Production |
+
+## Why Solana?
+
+<CardGroup cols={2}>
+  <Card title="Ultra Fast" icon="rocket">
+    400ms block times for instant confirmations
+  </Card>
+  <Card title="Near Zero Cost" icon="coins">
+    Fraction of a cent per transaction
+  </Card>
+  <Card title="High Throughput" icon="gauge-high">
+    Thousands of transactions per second
+  </Card>
+  <Card title="Growing Ecosystem" icon="chart-line">
+    Rapidly expanding DeFi and payments infrastructure
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+### 1. Install Dependencies
+
+<CodeGroup>
+```bash npm
+npm install @solana/web3.js @solana/spl-token
+```
+
+```bash yarn
+yarn add @solana/web3.js @solana/spl-token
+```
+</CodeGroup>
+
+### 2. Configure Network
+
+```javascript
+const solanaConfig = {
+  network: 'solana',
+  rpcUrl: 'https://api.mainnet-beta.solana.com',
+  facilitatorUrl: 'https://openx402.ai/solana',
+  usdcMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+};
+```
+
+### 3. Create Payment
+
+```javascript
+import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token';
+
+async function createSolanaPayment(amount, recipient) {
+  const connection = new Connection(solanaConfig.rpcUrl, 'confirmed');
+
+  // Get USDC token accounts
+  const fromTokenAccount = await getAssociatedTokenAddress(
+    new PublicKey(solanaConfig.usdcMint),
+    wallet.publicKey
+  );
+
+  const toTokenAccount = await getAssociatedTokenAddress(
+    new PublicKey(solanaConfig.usdcMint),
+    new PublicKey(recipient)
+  );
+
+  // Create transfer instruction
+  const transferInstruction = createTransferInstruction(
+    fromTokenAccount,
+    toTokenAccount,
+    wallet.publicKey,
+    amount * 1_000_000 // USDC has 6 decimals
+  );
+
+  // Send transaction
+  const transaction = new Transaction().add(transferInstruction);
+  const signature = await wallet.sendTransaction(transaction, connection);
+
+  await connection.confirmTransaction(signature);
+  return signature;
+}
+```
+
+### 4. Verify with Facilitator
+
+```javascript
+async function verifySolanaPayment(signature) {
+  const response = await fetch('https://openx402.ai/solana/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      signature: signature,
+      network: 'solana'
+    })
+  });
+
+  return await response.json();
+}
+```
+
+## Starter Repository
+
+Get started quickly with our Solana starter template:
+
+```bash
+git clone https://github.com/openx402/solana-starter
+cd solana-starter
+npm install
+npm run dev
+```
+
+<Card title="Solana Starter Repo" icon="github" href="https://github.com/openx402/solana-starter">
+  Complete example application with Solana integration
+</Card>
+
+## Server-Side Integration
+
+### Express.js Example
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.post('/api/premium', async (req, res) => {
+  const { signature } = req.body;
+
+  // Verify payment through Solana facilitator
+  const verification = await fetch('https://openx402.ai/solana/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      signature,
+      network: 'solana',
+      expectedAmount: '1.00' // 1 USDC
+    })
+  }).then(r => r.json());
+
+  if (!verification.valid) {
+    return res.status(402).json({ error: 'Payment required' });
+  }
+
+  // Payment verified - deliver service
+  res.json({
+    data: 'Your premium content',
+    transactionId: verification.transactionId
+  });
+});
+
+app.listen(3000);
+```
+
+## Testing
+
+Use Solana Devnet for development:
+
+```javascript
+const solanaDevnetConfig = {
+  network: 'solana-devnet',
+  rpcUrl: 'https://api.devnet.solana.com',
+  facilitatorUrl: 'https://openx402.ai/solana/test',
+  usdcMint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'
+};
+```
+
+Get testnet SOL and USDC from [Solana Faucet](https://faucet.solana.com/).
+
+## Endpoints
+
+| Endpoint | Purpose | Cost |
+|----------|---------|------|
+| `/open` | Production payments | $1 USDC |
+| `/test` | Development testing | $0.0001 USDC |
+| `/verify` | Payment verification | Free |
+| `/settle` | Settlement finalization | Free |
+| `/supported` | Network info | Free |
+
+## Wallet Integration
+
+### Phantom Wallet Example
+
+```javascript
+import { Connection, PublicKey } from '@solana/web3.js';
+
+async function connectPhantom() {
+  const { solana } = window;
+
+  if (solana && solana.isPhantom) {
+    const response = await solana.connect();
+    console.log('Connected with Public Key:', response.publicKey.toString());
+    return response.publicKey;
+  } else {
+    window.open('https://phantom.app/', '_blank');
+  }
+}
+
+async function sendPayment(amount, recipient) {
+  const { solana } = window;
+  const connection = new Connection(solanaConfig.rpcUrl);
+
+  // Create transaction (as shown above)
+  const transaction = createPaymentTransaction(amount, recipient);
+
+  // Sign and send via Phantom
+  const { signature } = await solana.signAndSendTransaction(transaction);
+  await connection.confirmTransaction(signature);
+
+  return signature;
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Transaction Confirmation">
+    - Always wait for transaction confirmation
+    - Use 'confirmed' commitment level for balance checks
+    - Handle transaction failures gracefully
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Check for insufficient SOL for transaction fees
+    - Verify USDC token account existence
+    - Implement retry logic for RPC timeouts
+  </Accordion>
+
+  <Accordion title="Security">
+    - Never expose private keys or seed phrases
+    - Validate all amounts server-side
+    - Use associated token accounts correctly
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Solana Documentation" icon="book" href="https://solana.com/docs">
+    Official Solana documentation
+  </Card>
+  <Card title="Solana Explorer" icon="magnifying-glass" href="https://explorer.solana.com">
+    View transactions and accounts
+  </Card>
+  <Card title="Solscan Explorer" icon="search" href="https://solscan.io">
+    Alternative explorer with detailed analytics
+  </Card>
+  <Card title="X402 Scan" icon="chart-line" href="https://www.x402scan.com/facilitator/openx402">
+    Monitor OpenX402 transactions
+  </Card>
+</CardGroup>
+
+## Support
+
+- **Network Status**: [Solana Status](https://status.solana.com)
+- **OpenX402 Support**: [X @openx402](https://x.com/openx402)
+- **Testnet Faucet**: [Solana Faucet](https://faucet.solana.com)

@@ -1,0 +1,208 @@
+---
+title: "What You Can Build"
+description: "Practical use cases and applications powered by OpenX402"
+---
+
+## Overview
+
+OpenX402 enables a new class of applications where services are monetized through micropayments instead of subscriptions or API keys. Here are real-world use cases you can build today.
+
+## AI Agents & Autonomous Services
+
+### Data Feed Purchases
+
+AI agents can autonomously purchase real-time data without human intervention:
+
+```python
+# AI agent buying market data
+response = requests.post(
+    "https://market-data.example.com/prices",
+    headers={"X-402-Payment": payment_payload}
+)
+```
+
+**Use Cases:**
+- Real-time price feeds for trading bots
+- Weather data for logistics optimization
+- News feeds for sentiment analysis
+- Social media trends for marketing AI
+
+### Computational Services
+
+Enable AI models to purchase compute resources on-demand:
+
+- **GPU time** for model training
+- **API calls** to other AI services
+- **Storage** for training data
+- **Inference** from specialized models
+
+## Paywalled APIs
+
+### No API Keys Required
+
+Build APIs that accept payments instead of managing authentication:
+
+```javascript
+// Traditional approach
+app.get('/premium-data', authenticateAPIKey, (req, res) => {
+  // Check subscription tier
+  // Rate limit based on plan
+});
+
+// OpenX402 approach
+app.get('/premium-data', verifyPayment, (req, res) => {
+  // Payment verified, serve data
+});
+```
+
+**Benefits:**
+- No user registration or accounts
+- No API key management
+- Pay-per-use pricing
+- Instant monetization
+
+### Usage-Based Pricing
+
+Perfect for services with variable usage:
+
+| Service Type | Traditional Model | OpenX402 Model |
+|--------------|-------------------|----------------|
+| Image API | $49/month for 10k requests | $0.005 per request |
+| Data Scraping | $199/month unlimited | $0.01 per scrape |
+| Translation | $99/month for 1M chars | $0.0001 per character |
+
+## Identity-Gated Content
+
+### NFT-Gated Endpoints
+
+Combine payment verification with NFT ownership:
+
+```typescript
+// Endpoint requires both payment AND NFT ownership
+app.post('/exclusive-content', async (req, res) => {
+  const paymentValid = await verifyOpenX402Payment(req);
+  const ownsNFT = await checkNFTOwnership(req.wallet);
+
+  if (paymentValid && ownsNFT) {
+    return res.json({ content: "..." });
+  }
+});
+```
+
+**Applications:**
+- Member-only content with micropayments
+- Tiered access based on NFT rarity
+- Community resources with usage fees
+
+## Proxy Services
+
+### Decentralized API Aggregation
+
+Build proxy services that aggregate multiple APIs:
+
+```
+User → OpenX402 Payment → Your Proxy → Multiple APIs
+```
+
+**Example: Weather Aggregator**
+- User pays $0.01 to your proxy
+- Proxy queries 5 different weather APIs
+- Returns aggregated, verified data
+- You keep the margin
+
+## Autonomous Marketplaces
+
+### Bot-to-Bot Commerce
+
+Enable bots to buy and sell services automatically:
+
+**Example: Data Marketplace**
+1. Bot A lists dataset for $5
+2. Bot B discovers listing
+3. Bot B pays via OpenX402
+4. Bot A automatically releases data
+5. No human intervention required
+
+## Analytics & Insights
+
+### Pay-Per-Query Analytics
+
+Monetize data analytics without subscriptions:
+
+```bash
+curl -X POST https://analytics.example.com/query \
+  -H "X-402-Payment: $PAYMENT_PROOF" \
+  -d '{"metric": "user_retention", "period": "30d"}'
+```
+
+**Use Cases:**
+- Business intelligence queries
+- Market research data
+- Competitive analysis
+- Custom reports
+
+## Developer Tools
+
+### Code Execution Services
+
+Pay-per-execution for serverless functions:
+
+- **Code playgrounds** that charge per run
+- **CI/CD pipelines** with usage-based billing
+- **Build services** that scale with usage
+- **Testing platforms** with micropayment tiers
+
+## Content Delivery
+
+### Paywalled Media
+
+Monetize content without platforms taking a cut:
+
+- **Articles** - $0.10 per read
+- **Videos** - $0.25 per stream
+- **Music** - $0.05 per play
+- **E-books** - $2.00 per download
+
+No middleman, instant settlement, global access.
+
+## Real-World Examples
+
+<CardGroup cols={2}>
+  <Card title="Trading Bot APIs" icon="chart-line">
+    High-frequency bots paying per API call for real-time market data
+  </Card>
+  <Card title="AI Model Marketplace" icon="brain">
+    Models buying training data and compute from other autonomous agents
+  </Card>
+  <Card title="Decentralized Scraping" icon="spider">
+    Web scraping services with pay-per-scrape pricing
+  </Card>
+  <Card title="Micro-SaaS Tools" icon="screwdriver-wrench">
+    Tiny utilities that charge fractions of a cent per use
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+<Steps>
+  <Step title="Choose Your Use Case">
+    Identify which services you want to monetize
+  </Step>
+  <Step title="Integrate OpenX402">
+    Follow our [quickstart guide](/quickstart) to add payment verification
+  </Step>
+  <Step title="Deploy & Test">
+    Start with the `/test` endpoint for development
+  </Step>
+  <Step title="Go Live">
+    Move to `/open` for production traffic
+  </Step>
+</Steps>
+
+## Need Inspiration?
+
+Check out [x402scan.com](https://www.x402scan.com/facilitator/openx402) to see live transactions and active integrations using OpenX402.
+
+<Card title="Ready to Build?" icon="rocket" href="/quickstart">
+  Start integrating OpenX402 into your application
+</Card>

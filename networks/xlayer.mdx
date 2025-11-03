@@ -1,0 +1,260 @@
+---
+title: "X Layer Network"
+description: "OpenX402 facilitator guide for X Layer (OKX's Ethereum L2)"
+---
+
+## Overview
+
+X Layer is OKX's Ethereum Layer 2 solution, offering fast and cost-effective transactions with full EVM compatibility. Built for DeFi and high-performance applications.
+
+## Facilitator URL
+
+```
+https://openx402.ai/xlayer
+```
+
+## Network Details
+
+| Property | Value |
+|----------|-------|
+| **Chain ID** | 196 |
+| **RPC URL** | https://rpc.xlayer.tech |
+| **Native Token** | OKB |
+| **Payment Token** | USDC |
+| **Block Time** | ~3 seconds |
+| **Transaction Cost** | ~$0.005 |
+| **Status** | ✅ Production |
+
+## Why X Layer?
+
+<CardGroup cols={2}>
+  <Card title="OKX Ecosystem" icon="building">
+    Direct access to OKX exchange liquidity
+  </Card>
+  <Card title="Low Fees" icon="dollar-sign">
+    Extremely low transaction costs
+  </Card>
+  <Card title="EVM Compatible" icon="code">
+    Full Ethereum tooling compatibility
+  </Card>
+  <Card title="Fast Finality" icon="bolt">
+    Quick transaction confirmations
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+### 1. Install Dependencies
+
+<CodeGroup>
+```bash npm
+npm install ethers @openzeppelin/contracts
+```
+
+```bash yarn
+yarn add ethers @openzeppelin/contracts
+```
+</CodeGroup>
+
+### 2. Configure Network
+
+```javascript
+const xlayerConfig = {
+  chainId: 196,
+  name: 'X Layer',
+  rpcUrl: 'https://rpc.xlayer.tech',
+  facilitatorUrl: 'https://openx402.ai/xlayer',
+  usdcAddress: '0x74b7F16337b8972027F6196A17a631aC6dE26d22'
+};
+```
+
+### 3. Create Payment
+
+```javascript
+import { ethers } from 'ethers';
+
+async function createXLayerPayment(amount, recipient) {
+  const provider = new ethers.JsonRpcProvider(xlayerConfig.rpcUrl);
+  const signer = new ethers.Wallet(privateKey, provider);
+
+  // USDC contract on X Layer
+  const usdc = new ethers.Contract(
+    xlayerConfig.usdcAddress,
+    ['function transfer(address to, uint256 amount)'],
+    signer
+  );
+
+  // Send payment
+  const tx = await usdc.transfer(
+    recipient,
+    ethers.parseUnits(amount.toString(), 6) // USDC has 6 decimals
+  );
+
+  await tx.wait();
+  return tx.hash;
+}
+```
+
+### 4. Verify with Facilitator
+
+```javascript
+async function verifyXLayerPayment(txHash) {
+  const response = await fetch('https://openx402.ai/xlayer/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      txHash: txHash,
+      network: 'xlayer'
+    })
+  });
+
+  return await response.json();
+}
+```
+
+## Starter Repository
+
+Get started quickly with our X Layer starter template:
+
+```bash
+git clone https://github.com/openx402/xlayer-starter
+cd xlayer-starter
+npm install
+npm run dev
+```
+
+<Card title="X Layer Starter Repo" icon="github" href="https://github.com/openx402/xlayer-starter">
+  Complete example application with X Layer integration
+</Card>
+
+## Server-Side Integration
+
+### Express.js Example
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.post('/api/premium', async (req, res) => {
+  const { txHash } = req.body;
+
+  // Verify payment through X Layer facilitator
+  const verification = await fetch('https://openx402.ai/xlayer/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      txHash,
+      network: 'xlayer',
+      expectedAmount: '1.00' // 1 USDC
+    })
+  }).then(r => r.json());
+
+  if (!verification.valid) {
+    return res.status(402).json({ error: 'Payment required' });
+  }
+
+  // Payment verified - deliver service
+  res.json({
+    data: 'Your premium content',
+    transactionId: verification.transactionId
+  });
+});
+
+app.listen(3000);
+```
+
+## Testing
+
+Use X Layer Testnet for development:
+
+```javascript
+const xlayerTestnetConfig = {
+  chainId: 195,
+  name: 'X Layer Testnet',
+  rpcUrl: 'https://testrpc.xlayer.tech',
+  facilitatorUrl: 'https://openx402.ai/xlayer/test',
+  usdcAddress: '0x...' // Testnet USDC address
+};
+```
+
+Get testnet tokens from [X Layer Faucet](https://web3.okx.com/xlayer/faucet).
+
+## Endpoints
+
+| Endpoint | Purpose | Cost |
+|----------|---------|------|
+| `/open` | Production payments | $1 USDC |
+| `/test` | Development testing | $0.0001 USDC |
+| `/verify` | Payment verification | Free |
+| `/settle` | Settlement finalization | Free |
+| `/supported` | Network info | Free |
+
+## Adding X Layer to MetaMask
+
+```javascript
+async function addXLayerToMetaMask() {
+  try {
+    await window.ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{
+        chainId: '0xC4', // 196 in hex
+        chainName: 'X Layer Mainnet',
+        nativeCurrency: {
+          name: 'OKB',
+          symbol: 'OKB',
+          decimals: 18
+        },
+        rpcUrls: ['https://rpc.xlayer.tech'],
+        blockExplorerUrls: ['https://www.okx.com/explorer/xlayer']
+      }]
+    });
+  } catch (error) {
+    console.error('Failed to add X Layer:', error);
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Gas Optimization">
+    - Use OKB for gas payments (native token)
+    - Monitor gas prices during peak times
+    - Batch transactions when possible
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Implement retry logic for network congestion
+    - Handle insufficient OKB balance for gas
+    - Log all transaction attempts
+  </Accordion>
+
+  <Accordion title="Security">
+    - Never expose private keys client-side
+    - Validate all payment amounts server-side
+    - Use secure RPC endpoints
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="X Layer Documentation" icon="book" href="https://web3.okx.com/xlayer/docs">
+    Official X Layer documentation
+  </Card>
+  <Card title="OKLink Explorer" icon="magnifying-glass" href="https://www.oklink.com/x-layer">
+    View transactions and contracts
+  </Card>
+  <Card title="X Layer Bridge" icon="bridge" href="https://web3.okx.com/xlayer/bridge">
+    Bridge assets to X Layer (deprecated Aug 2025)
+  </Card>
+  <Card title="X402 Scan" icon="chart-line" href="https://www.x402scan.com/facilitator/openx402">
+    Monitor OpenX402 transactions
+  </Card>
+</CardGroup>
+
+## Support
+
+- **OpenX402 Support**: [X @openx402](https://x.com/openx402)
+- **Testnet Faucet**: [X Layer Faucet](https://web3.okx.com/xlayer/faucet)
+- **Network Announcements**: [OKX Help Center](https://www.okx.com/help)

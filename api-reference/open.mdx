@@ -1,0 +1,151 @@
+---
+title: "/open"
+description: "Production payment endpoint"
+---
+
+## Overview
+
+The `/open` endpoint is the **production gateway** for processing payments through OpenX402. Use this endpoint for live transactions that cost $1 USDC.
+
+## Endpoint
+
+```
+POST https://open.x402.host/open
+```
+
+## Cost
+
+**$1 USDC per transaction** on Base network.
+
+## When to Use
+
+- **Production applications** with real users
+- **Live services** that require payment verification
+- After testing with `/test` endpoint
+
+<Warning>
+  Use `/test` for development. Only use `/open` for production traffic to avoid unnecessary costs.
+</Warning>
+
+## Request
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| `Content-Type` | `application/json` | Yes |
+| `X-402-Payment` | Payment proof/authorization | Yes |
+
+### Body Parameters
+
+| Parameter | Type | Description | Required |
+|-----------|------|-------------|----------|
+| `network` | string | Blockchain network (e.g., "base") | Yes |
+| `txHash` | string | Transaction hash | Yes |
+| `amount` | number | Payment amount in USDC | Yes |
+| `recipient` | string | Payment recipient address | Yes |
+
+### Example Request
+
+```javascript
+const response = await fetch('https://open.x402.host/open', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-402-Payment': paymentAuthorization
+  },
+  body: JSON.stringify({
+    network: 'base',
+    txHash: '0x...',
+    amount: 1.00,
+    recipient: '0x...'
+  })
+});
+```
+
+## Response
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "transactionId": "tx_abc123",
+  "network": "base",
+  "amount": "1.00",
+  "status": "confirmed"
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": "Insufficient payment",
+  "required": "1.00 USDC",
+  "provided": "0.50 USDC"
+}
+```
+
+## Status Codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Payment successful |
+| `400` | Invalid request parameters |
+| `402` | Payment required or insufficient |
+| `500` | Server error |
+
+## Complete Example
+
+```javascript
+async function processProductionPayment(txHash, amount) {
+  try {
+    const response = await fetch('https://open.x402.host/open', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        network: 'base',
+        txHash: txHash,
+        amount: amount,
+        recipient: process.env.RECIPIENT_ADDRESS
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Payment failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Payment successful:', data.transactionId);
+    return data;
+
+  } catch (error) {
+    console.error('Payment processing error:', error);
+    throw error;
+  }
+}
+```
+
+## Best Practices
+
+1. **Validate before calling** - Check payment amount client-side
+2. **Handle errors gracefully** - Provide clear feedback to users
+3. **Log transactions** - Keep records of all payment attempts
+4. **Use timeouts** - Don't let requests hang indefinitely
+5. **Verify settlement** - Call `/verify` after `/open` for confirmation
+
+## Rate Limiting
+
+- **100 requests per minute** per IP address
+- Exceeding limits returns `429 Too Many Requests`
+
+## Related Endpoints
+
+- [/test](/api-reference/test) - Development endpoint ($0.0001)
+- [/verify](/api-reference/verify) - Verify payment status
+- [/settle](/api-reference/settle) - Finalize settlement
+- [/supported](/api-reference/supported) - Check supported networks

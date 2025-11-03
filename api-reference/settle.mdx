@@ -1,0 +1,289 @@
+---
+title: "/settle"
+description: "Finalize transaction settlement"
+---
+
+## Overview
+
+The `/settle` endpoint finalizes on-chain settlement for a transaction. Call this after successfully delivering a service to complete the payment flow.
+
+## Endpoint
+
+```
+POST https://open.x402.host/settle
+```
+
+## When to Use
+
+- **After service delivery** - Once you've provided the paid service
+- **Settlement finalization** - To complete the payment cycle
+- **Record keeping** - For transaction finality
+
+<Info>
+  Settlement is typically called **after** `/verify` and **after** delivering the service.
+</Info>
+
+## Request
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| `Content-Type` | `application/json` | Yes |
+
+### Body Parameters
+
+| Parameter | Type | Description | Required |
+|-----------|------|-------------|----------|
+| `transactionId` | string | Transaction ID from /verify | Yes |
+| `network` | string | Blockchain network | Yes |
+| `serviceId` | string | Your internal service identifier | No |
+
+### Example Request
+
+<CodeGroup>
+```javascript JavaScript
+async function settleTransaction(transactionId, network) {
+  const response = await fetch('https://open.x402.host/settle', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      transactionId: transactionId,
+      network: network,
+      serviceId: 'my-service-123' // optional
+    })
+  });
+
+  return await response.json();
+}
+
+// Usage
+const result = await settleTransaction('tx_abc123', 'base');
+console.log('Settlement status:', result.status);
+```
+
+```python Python
+import requests
+
+def settle_transaction(transaction_id, network):
+    response = requests.post(
+        'https://open.x402.host/settle',
+        json={
+            'transactionId': transaction_id,
+            'network': network,
+            'serviceId': 'my-service-123'  # optional
+        }
+    )
+    return response.json()
+
+# Usage
+result = settle_transaction('tx_abc123', 'base')
+print('Settlement status:', result['status'])
+```
+
+```bash cURL
+curl -X POST https://open.x402.host/settle \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "tx_abc123",
+    "network": "base",
+    "serviceId": "my-service-123"
+  }'
+```
+</CodeGroup>
+
+## Response
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "transactionId": "tx_abc123",
+  "status": "settled",
+  "blockHash": "0x...",
+  "blockNumber": 12345678,
+  "timestamp": 1699564800
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": "Transaction not found",
+  "code": "TX_NOT_FOUND"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether settlement succeeded |
+| `transactionId` | string | Transaction identifier |
+| `status` | string | Settlement status |
+| `blockHash` | string | Blockchain block hash |
+| `blockNumber` | number | Block number |
+| `timestamp` | number | Unix timestamp |
+| `error` | string | Error message (if failed) |
+| `code` | string | Error code (if failed) |
+
+## Settlement Status
+
+| Status | Description |
+|--------|-------------|
+| `settled` | Successfully settled on-chain |
+| `pending` | Settlement in progress |
+| `failed` | Settlement failed |
+| `already_settled` | Already finalized |
+
+## Complete Payment Flow
+
+Here's the full integration flow with verify and settle:
+
+```javascript
+app.post('/api/premium-content', async (req, res) => {
+  const paymentProof = req.headers['x-402-payment'];
+
+  // Step 1: Verify payment
+  const verification = await fetch('https://open.x402.host/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      proof: paymentProof,
+      network: 'base'
+    })
+  }).then(r => r.json());
+
+  if (!verification.valid) {
+    return res.status(402).json({ error: 'Invalid payment' });
+  }
+
+  // Step 2: Deliver service
+  const content = await generatePremiumContent();
+  res.json({ content });
+
+  // Step 3: Settle in background (don't await)
+  settleInBackground(verification.transactionId);
+});
+
+async function settleInBackground(transactionId) {
+  try {
+    await fetch('https://open.x402.host/settle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transactionId,
+        network: 'base'
+      })
+    });
+    console.log(`Settled transaction: ${transactionId}`);
+  } catch (error) {
+    console.error(`Settlement failed for ${transactionId}:`, error);
+    // Log for manual review
+  }
+}
+```
+
+## Best Practices
+
+1. **Settle after delivery** - Only settle once service is provided
+2. **Don't block on settlement** - Settle asynchronously in background
+3. **Implement retries** - Settlement can fail due to network issues
+4. **Log all settlements** - Keep records for accounting
+5. **Monitor failures** - Set up alerts for settlement errors
+
+## Retry Logic
+
+```javascript
+async function settleWithRetry(transactionId, network, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch('https://open.x402.host/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId, network }),
+        timeout: 10000
+      });
+
+      const result = await response.json();
+
+      if (result.success || result.status === 'already_settled') {
+        return result;
+      }
+
+      throw new Error(result.error || 'Settlement failed');
+
+    } catch (error) {
+      console.error(`Settlement attempt ${attempt} failed:`, error);
+
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      // Exponential backoff
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.pow(2, attempt) * 1000)
+      );
+    }
+  }
+}
+```
+
+## Settlement Queue
+
+For high-volume applications, use a queue:
+
+```javascript
+const settlementQueue = [];
+
+// Add to queue instead of immediate settlement
+function queueSettlement(transactionId, network) {
+  settlementQueue.push({ transactionId, network, retries: 0 });
+}
+
+// Process queue periodically
+setInterval(async () => {
+  while (settlementQueue.length > 0) {
+    const item = settlementQueue.shift();
+
+    try {
+      await fetch('https://open.x402.host/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactionId: item.transactionId,
+          network: item.network
+        })
+      });
+
+      console.log(`Settled: ${item.transactionId}`);
+
+    } catch (error) {
+      item.retries++;
+      if (item.retries < 3) {
+        settlementQueue.push(item); // Re-queue
+      } else {
+        console.error(`Failed to settle after 3 attempts: ${item.transactionId}`);
+      }
+    }
+  }
+}, 5000); // Process every 5 seconds
+```
+
+## Rate Limiting
+
+- **200 requests per minute** per IP
+- Use queuing for high-volume applications
+- Exceeding limits returns `429 Too Many Requests`
+
+## Related Endpoints
+
+- [/verify](/api-reference/verify) - Verify payment (call before settle)
+- [/open](/api-reference/open) - Production payment endpoint
+- [/test](/api-reference/test) - Development endpoint
+- [/supported](/api-reference/supported) - Check supported networks

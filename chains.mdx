@@ -1,0 +1,221 @@
+---
+title: "Supported Chains"
+description: "Multi-chain support for Base, X Layer, and Solana"
+---
+
+## Overview
+
+OpenX402 is a **multi-chain facilitator** supporting multiple blockchain networks. Each chain offers unique advantages depending on your use case.
+
+## Supported Networks
+
+<CardGroup cols={3}>
+  <Card title="Base" icon="layer-group">
+    **Primary Facilitator**
+
+    Ethereum L2 with low fees and high security
+  </Card>
+  <Card title="X Layer" icon="x">
+    **OKX Layer-2**
+
+    High-performance L2 on mainnet
+  </Card>
+  <Card title="Solana" icon="bolt">
+    **High Speed**
+
+    Ultra-fast transactions for high-frequency use cases
+  </Card>
+</CardGroup>
+
+## Base (Primary Facilitator)
+
+Base is our **primary facilitator** and the recommended choice for most applications.
+
+### Key Details
+
+- **Network**: Base (Ethereum L2)
+- **Facilitator URL**: `https://open.x402.host`
+- **Transaction Cost**: Low (< $0.01 per transaction)
+- **Settlement Time**: ~2 seconds
+- **Status**: Production
+
+### Why Base?
+
+- **Security**: Inherits Ethereum's security guarantees
+- **Cost-Effective**: Significantly cheaper than Ethereum mainnet
+- **Ecosystem**: Large DeFi ecosystem and liquidity
+- **Developer Experience**: Full EVM compatibility
+
+### Endpoints
+
+| Endpoint | Purpose | Cost |
+|----------|---------|------|
+| `/open` | Production gateway | $1 USDC |
+| `/test` | Development testing | $0.0001 USDC |
+| `/verify` | Payment verification | Free |
+| `/settle` | Settlement finalization | Free |
+| `/supported` | List networks | Free |
+
+### Example Integration
+
+```javascript
+const response = await fetch('https://open.x402.host/verify', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    transactionHash: '0x...',
+    network: 'base'
+  })
+});
+```
+
+## X Layer
+
+X Layer is OKX's high-performance Layer-2 solution, now live on mainnet.
+
+### Key Details
+
+- **Network**: X Layer (OKX L2)
+- **Facilitator URL**: Coming soon
+- **Transaction Cost**: Ultra-low
+- **Settlement Time**: < 1 second
+- **Status**: Mainnet Live
+
+### Why X Layer?
+
+- **Speed**: Near-instant finality
+- **Cost**: Among the cheapest L2 options
+- **OKX Ecosystem**: Direct integration with OKX exchange
+- **Scalability**: Built for high-throughput applications
+
+### Best For
+
+- High-frequency trading bots
+- Real-time data feeds
+- Gaming microtransactions
+- High-volume API services
+
+## Solana
+
+Solana offers the fastest transaction speeds, ideal for high-frequency use cases.
+
+### Key Details
+
+- **Network**: Solana
+- **Facilitator URL**: In development
+- **Transaction Cost**: ~$0.00025 per transaction
+- **Settlement Time**: < 500ms
+- **Status**: Coming Soon
+
+### Why Solana?
+
+- **Ultra-Fast**: Sub-second transaction finality
+- **Cost-Effective**: Lowest transaction fees
+- **Parallel Processing**: Can handle 65,000+ TPS
+- **Growing Ecosystem**: Expanding DeFi and NFT markets
+
+### Best For
+
+- High-frequency bot operations
+- Real-time streaming payments
+- Gaming and metaverse applications
+- Consumer-facing microtransactions
+
+## Choosing the Right Chain
+
+<Accordion title="Cost-Sensitive Applications">
+  **Recommended: Solana** (when available) or **X Layer**
+
+  For applications where every fraction of a cent matters, these chains offer the lowest fees.
+</Accordion>
+
+<Accordion title="Security-First Applications">
+  **Recommended: Base**
+
+  For applications where security is paramount, Base provides Ethereum-level security at L2 costs.
+</Accordion>
+
+<Accordion title="High-Frequency Trading">
+  **Recommended: Solana** or **X Layer**
+
+  For bots making hundreds of transactions per second, speed is critical.
+</Accordion>
+
+<Accordion title="General Purpose">
+  **Recommended: Base**
+
+  For most applications, Base offers the best balance of cost, security, and ecosystem support.
+</Accordion>
+
+## Network Comparison
+
+| Feature | Base | X Layer | Solana |
+|---------|------|---------|--------|
+| **Settlement Time** | ~2s | &lt;1s | &lt;500ms |
+| **Transaction Cost** | ~$0.01 | ~$0.001 | ~$0.0003 |
+| **Security Model** | Ethereum L2 | Ethereum L2 | Proof of Stake |
+| **TPS** | ~1,000 | ~5,000 | 65,000+ |
+| **Status** | ✅ Production | ✅ Mainnet | 🔄 Coming Soon |
+| **Best For** | General use | High volume | Ultra-fast |
+
+## Getting Started
+
+### 1. Check Network Availability
+
+```bash
+curl https://open.x402.host/supported
+```
+
+### 2. Choose Your Network
+
+Select based on your requirements:
+- **Base** for most applications
+- **X Layer** for high volume
+- **Solana** for maximum speed (coming soon)
+
+### 3. Integrate
+
+Follow our [quickstart guide](/quickstart) with your chosen network.
+
+## Multi-Chain Strategy
+
+Many applications benefit from **supporting multiple chains**:
+
+```javascript
+// Support multiple networks
+const networks = ['base', 'xlayer', 'solana'];
+
+async function processPayment(network, tx) {
+  const facilitator = getFacilitatorForNetwork(network);
+  return await facilitator.verify(tx);
+}
+```
+
+### Benefits
+
+- **User Choice**: Let users pay with their preferred chain
+- **Redundancy**: Fallback if one network has issues
+- **Cost Optimization**: Route to cheapest network dynamically
+- **Geographic Optimization**: Different chains have different regional strengths
+
+## Upcoming Networks
+
+We're constantly expanding chain support. Networks under consideration:
+
+- Arbitrum
+- Optimism
+- Polygon
+- Avalanche
+- BSC
+
+<Card title="Request a Chain" icon="plus" href="https://github.com/openx402">
+  Want OpenX402 on a specific chain? Let us know on GitHub!
+</Card>
+
+## Monitoring
+
+Track facilitator activity and transaction stats:
+
+<Card title="X402 Scan" icon="magnifying-glass" href="https://www.x402scan.com/facilitator/openx402">
+  Monitor OpenX402 transactions across all supported chains
+</Card>

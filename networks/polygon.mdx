@@ -1,0 +1,260 @@
+---
+title: "Polygon Network"
+description: "OpenX402 facilitator guide for Polygon (Ethereum L2)"
+---
+
+## Overview
+
+Polygon (formerly Matic) is a leading Ethereum Layer 2 scaling solution. With a massive ecosystem and low costs, it's a proven choice for production applications.
+
+## Facilitator URL
+
+```
+https://openx402.ai/polygon
+```
+
+## Network Details
+
+| Property | Value |
+|----------|-------|
+| **Chain ID** | 137 |
+| **RPC URL** | https://polygon-rpc.com |
+| **Native Token** | MATIC (POL) |
+| **Payment Token** | USDC |
+| **Block Time** | ~2 seconds |
+| **Transaction Cost** | ~$0.02 |
+| **Status** | ✅ Production |
+
+## Why Polygon?
+
+<CardGroup cols={2}>
+  <Card title="Massive Ecosystem" icon="globe">
+    Thousands of dApps and integrations
+  </Card>
+  <Card title="Low Costs" icon="coins">
+    Significantly cheaper than Ethereum L1
+  </Card>
+  <Card title="Ethereum Security" icon="shield">
+    Secured by Ethereum mainnet
+  </Card>
+  <Card title="Proven Track Record" icon="chart-line">
+    Battle-tested in production
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+### 1. Install Dependencies
+
+<CodeGroup>
+```bash npm
+npm install ethers @openzeppelin/contracts
+```
+
+```bash yarn
+yarn add ethers @openzeppelin/contracts
+```
+</CodeGroup>
+
+### 2. Configure Network
+
+```javascript
+const polygonConfig = {
+  chainId: 137,
+  name: 'Polygon',
+  rpcUrl: 'https://polygon-rpc.com',
+  facilitatorUrl: 'https://openx402.ai/polygon',
+  usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'
+};
+```
+
+### 3. Create Payment
+
+```javascript
+import { ethers } from 'ethers';
+
+async function createPolygonPayment(amount, recipient) {
+  const provider = new ethers.JsonRpcProvider(polygonConfig.rpcUrl);
+  const signer = new ethers.Wallet(privateKey, provider);
+
+  // USDC contract on Polygon
+  const usdc = new ethers.Contract(
+    polygonConfig.usdcAddress,
+    ['function transfer(address to, uint256 amount)'],
+    signer
+  );
+
+  // Send payment
+  const tx = await usdc.transfer(
+    recipient,
+    ethers.parseUnits(amount.toString(), 6) // USDC has 6 decimals
+  );
+
+  await tx.wait();
+  return tx.hash;
+}
+```
+
+### 4. Verify with Facilitator
+
+```javascript
+async function verifyPolygonPayment(txHash) {
+  const response = await fetch('https://openx402.ai/polygon/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      txHash: txHash,
+      network: 'polygon'
+    })
+  });
+
+  return await response.json();
+}
+```
+
+## Starter Repository
+
+Get started quickly with our Polygon starter template:
+
+```bash
+git clone https://github.com/openx402/polygon-starter
+cd polygon-starter
+npm install
+npm run dev
+```
+
+<Card title="Polygon Starter Repo" icon="github" href="https://github.com/openx402/polygon-starter">
+  Complete example application with Polygon integration
+</Card>
+
+## Server-Side Integration
+
+### Express.js Example
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.post('/api/premium', async (req, res) => {
+  const { txHash } = req.body;
+
+  // Verify payment through Polygon facilitator
+  const verification = await fetch('https://openx402.ai/polygon/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      txHash,
+      network: 'polygon',
+      expectedAmount: '1.00' // 1 USDC
+    })
+  }).then(r => r.json());
+
+  if (!verification.valid) {
+    return res.status(402).json({ error: 'Payment required' });
+  }
+
+  // Payment verified - deliver service
+  res.json({
+    data: 'Your premium content',
+    transactionId: verification.transactionId
+  });
+});
+
+app.listen(3000);
+```
+
+## Testing
+
+Use Polygon Amoy testnet for development:
+
+```javascript
+const polygonAmoyConfig = {
+  chainId: 80002,
+  name: 'Polygon Amoy',
+  rpcUrl: 'https://rpc-amoy.polygon.technology',
+  facilitatorUrl: 'https://openx402.ai/polygon/test',
+  usdcAddress: '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582'
+};
+```
+
+Get testnet MATIC from [Polygon Amoy Faucet](https://faucets.chain.link/polygon-amoy).
+
+## Endpoints
+
+| Endpoint | Purpose | Cost |
+|----------|---------|------|
+| `/open` | Production payments | $1 USDC |
+| `/test` | Development testing | $0.0001 USDC |
+| `/verify` | Payment verification | Free |
+| `/settle` | Settlement finalization | Free |
+| `/supported` | Network info | Free |
+
+## Adding Polygon to MetaMask
+
+```javascript
+async function addPolygonToMetaMask() {
+  try {
+    await window.ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{
+        chainId: '0x89', // 137 in hex
+        chainName: 'Polygon Mainnet',
+        nativeCurrency: {
+          name: 'MATIC',
+          symbol: 'MATIC',
+          decimals: 18
+        },
+        rpcUrls: ['https://polygon-rpc.com'],
+        blockExplorerUrls: ['https://polygonscan.com']
+      }]
+    });
+  } catch (error) {
+    console.error('Failed to add Polygon:', error);
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Gas Optimization">
+    - Keep MATIC for gas (very cheap)
+    - Use appropriate gas limits (21000 for transfers)
+    - Monitor gas prices during peak usage
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Implement retry logic for RPC failures
+    - Handle insufficient MATIC for gas
+    - Verify transaction confirmations
+  </Accordion>
+
+  <Accordion title="Security">
+    - Never expose private keys client-side
+    - Validate all payment amounts server-side
+    - Use official RPC endpoints
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Polygon Documentation" icon="book" href="https://docs.polygon.technology">
+    Official Polygon documentation
+  </Card>
+  <Card title="PolygonScan" icon="magnifying-glass" href="https://polygonscan.com">
+    View transactions and contracts
+  </Card>
+  <Card title="Polygon Portal Bridge" icon="bridge" href="https://portal.polygon.technology/bridge">
+    Bridge assets to Polygon
+  </Card>
+  <Card title="X402 Scan" icon="chart-line" href="https://www.x402scan.com/facilitator/openx402">
+    Monitor OpenX402 transactions
+  </Card>
+</CardGroup>
+
+## Support
+
+- **Network Status**: [Polygon Status](https://status.polygon.technology)
+- **OpenX402 Support**: [X @openx402](https://x.com/openx402)
+- **Testnet Faucet**: [Polygon Amoy Faucet](https://faucets.chain.link/polygon-amoy)
