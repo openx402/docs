@@ -1,0 +1,256 @@
+---
+title: "Starter Projects"
+description: "Production-ready starter templates to build with OpenX402"
+---
+
+## Overview
+
+Get started quickly with our production-ready starter projects. These templates demonstrate real-world OpenX402 integrations and are perfect for learning or building your own applications.
+
+## Featured Starter: IPFS Gateway with X402
+
+Our flagship starter project showcases how to build a paywall-protected IPFS gateway using OpenX402 on Base.
+
+<Card
+  title="x402-ipfs-starter-server"
+  icon="github"
+  href="https://github.com/openx402/x402-ipfs-starter-server"
+>
+  Production-ready IPFS gateway with X402 payments - Live at ipfs.openx402.ai
+</Card>
+
+### What It Does
+
+This starter project implements a **paywall-protected IPFS gateway** that requires micropayments before serving content. It's a perfect example of monetizing infrastructure services with OpenX402.
+
+<CardGroup cols={2}>
+  <Card title="Live Demo" icon="globe" href="https://ipfs.openx402.ai">
+    Try the live deployment
+  </Card>
+  <Card title="Source Code" icon="code" href="https://github.com/openx402/x402-ipfs-starter-server">
+    View on GitHub
+  </Card>
+</CardGroup>
+
+### Key Features
+
+- **IPFS Content Delivery**: Serve IPFS content through a custom gateway
+- **X402 Payment Protection**: Require payment before delivering content
+- **Base Network Integration**: Uses Base for fast, low-cost transactions
+- **Express.js Backend**: Simple Node.js server architecture
+- **Production Ready**: Already deployed and serving traffic
+
+### Tech Stack
+
+```
+Backend:    Node.js + Express
+Blockchain: Base (Ethereum L2)
+Payment:    USDC via OpenX402
+Storage:    IPFS
+```
+
+### Quick Start
+
+Clone and run the IPFS gateway starter:
+
+```bash
+git clone https://github.com/openx402/x402-ipfs-starter-server
+cd x402-ipfs-starter-server
+npm install
+npm start
+```
+
+### How It Works
+
+1. **User requests IPFS content** from your gateway
+2. **Server returns 402 Payment Required** with OpenX402 facilitator info
+3. **User submits payment** via Base network
+4. **Server verifies payment** with OpenX402
+5. **Content is delivered** from IPFS
+
+### Example Request Flow
+
+```javascript
+// 1. Initial request without payment
+GET /ipfs/QmXxxx...
+
+// Response: 402 Payment Required
+{
+  "error": "Payment required",
+  "facilitator": "https://openx402.ai/base",
+  "amount": "0.01",
+  "network": "base"
+}
+
+// 2. Request with payment proof
+GET /ipfs/QmXxxx...
+X-402-Payment: <payment_proof>
+
+// Response: 200 OK
+<IPFS content delivered>
+```
+
+### Integration Example
+
+Here's how the payment verification works:
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.get('/ipfs/:cid', async (req, res) => {
+  const paymentProof = req.headers['x-402-payment'];
+
+  // Check for payment
+  if (!paymentProof) {
+    return res.status(402).json({
+      error: 'Payment required',
+      facilitator: 'https://openx402.ai/base',
+      amount: '0.01',
+      network: 'base'
+    });
+  }
+
+  // Verify payment with OpenX402
+  const verification = await fetch('https://open.x402.host/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      proof: paymentProof,
+      network: 'base'
+    })
+  }).then(r => r.json());
+
+  if (!verification.valid) {
+    return res.status(402).json({ error: 'Invalid payment' });
+  }
+
+  // Payment verified - serve IPFS content
+  const ipfsContent = await fetchFromIPFS(req.params.cid);
+  res.send(ipfsContent);
+});
+```
+
+## Why This Starter?
+
+<AccordionGroup>
+  <Accordion title="Real Production Use">
+    This isn't just a demo - it's running in production at ipfs.openx402.ai, serving real IPFS content to paying users.
+  </Accordion>
+
+  <Accordion title="Infrastructure Monetization">
+    Perfect template for monetizing infrastructure services like gateways, APIs, or data feeds without complex payment systems.
+  </Accordion>
+
+  <Accordion title="Simple Architecture">
+    Clean Express.js codebase that's easy to understand, modify, and deploy to your own infrastructure.
+  </Accordion>
+
+  <Accordion title="Base Network">
+    Uses Base for low-cost transactions (~$0.01) with fast confirmations (~2 seconds).
+  </Accordion>
+</AccordionGroup>
+
+## Use Cases
+
+This starter project is ideal for:
+
+- **IPFS Gateway Operators**: Monetize your gateway without subscriptions
+- **Content Delivery Networks**: Add pay-per-request to your CDN
+- **API Providers**: Implement usage-based pricing for your APIs
+- **Data Services**: Charge for database queries or analytics endpoints
+
+## Customization
+
+The starter is designed to be easily customized:
+
+### Change Payment Amount
+
+```javascript
+// Adjust the price in your route handler
+amount: '0.01' // Change to your desired USDC amount
+```
+
+### Switch Networks
+
+```javascript
+// Use a different blockchain
+network: 'solana' // or 'polygon', 'bsc', 'xlayer'
+facilitator: 'https://openx402.ai/solana'
+```
+
+### Add Custom Logic
+
+```javascript
+// Add your own business logic
+if (verification.valid) {
+  // Log analytics
+  await logPayment(verification.transactionId);
+
+  // Apply rate limiting
+  await checkRateLimit(req.ip);
+
+  // Deliver content
+  return serveContent();
+}
+```
+
+## Deployment
+
+The starter includes everything you need to deploy:
+
+- **Docker support** for containerized deployment
+- **Environment variables** for configuration
+- **Health check endpoints** for monitoring
+- **Production logging** with request tracking
+
+### Deploy to Your Server
+
+```bash
+# Build and deploy
+npm run build
+npm run start:production
+
+# Or use Docker
+docker build -t x402-ipfs-gateway .
+docker run -p 3000:3000 x402-ipfs-gateway
+```
+
+## More Starters Coming Soon
+
+We're building more starter projects for common use cases:
+
+<CardGroup cols={2}>
+  <Card title="AI API Gateway" icon="robot">
+    Payment-protected LLM API proxy (Coming soon)
+  </Card>
+  <Card title="Analytics Dashboard" icon="chart-line">
+    Paywall for premium analytics data (Coming soon)
+  </Card>
+  <Card title="File Storage API" icon="folder">
+    Paid file upload and retrieval (Coming soon)
+  </Card>
+  <Card title="Compute Marketplace" icon="server">
+    Pay-per-execution serverless functions (Coming soon)
+  </Card>
+</CardGroup>
+
+## Community Starters
+
+Built something cool with OpenX402? Share your starter project with the community!
+
+<Card
+  title="Submit Your Starter"
+  icon="code-pull-request"
+  href="https://github.com/openx402"
+>
+  Open a PR to feature your project here
+</Card>
+
+## Get Help
+
+Need help with the starter projects?
+
+- **Issues**: [GitHub Issues](https://github.com/openx402/x402-ipfs-starter-server/issues)
+- **Community**: [X @openx402](https://x.com/openx402)
+- **Documentation**: [OpenX402 Docs](/quickstart)

@@ -1,285 +1,338 @@
 ---
-title: "Quickstart"
-description: "Build your first x402 server using OpenX402's facilitator"
+title: "Quickstart - x402 Starter Server"
+description: "Get started with OpenX402 in 5 minutes using our IPFS gateway starter"
 ---
 
-## Overview
+## Get Running in 5 Minutes
 
-This guide will walk you through integrating OpenX402 into your application in under 10 minutes. By the end, you'll have a working endpoint that accepts micropayments.
+The fastest way to understand OpenX402 is to run our production IPFS gateway starter. You'll have a working paywall-protected API running locally in minutes.
 
-**Facilitator URL**: `https://open.x402.host`
+<Card
+  title="Live Demo"
+  icon="rocket"
+  href="https://ipfs.openx402.ai"
+>
+  See the starter running in production at ipfs.openx402.ai
+</Card>
+
+## What You'll Build
+
+A **paywall-protected IPFS gateway** that:
+- Serves IPFS content behind a payment wall
+- Accepts USDC payments on Base network
+- Verifies payments through OpenX402
+- Returns 402 Payment Required for unpaid requests
 
 ## Prerequisites
 
-- A wallet with some USDC on Base (for testing)
-- Basic knowledge of Node.js or Python
-- An API or service you want to monetize
+- Node.js 18+ installed
+- Git
+- 5 minutes of your time
 
-## Step 1: Test the Facilitator
+**No wallet or crypto needed for local testing!**
 
-First, let's verify the facilitator is accessible and see what networks it supports.
+## Step 1: Clone the Starter
+
+Clone the x402-ipfs-starter-server repository:
 
 ```bash
-curl https://open.x402.host/supported
+git clone https://github.com/openx402/x402-ipfs-starter-server
+cd x402-ipfs-starter-server
 ```
 
-You should see a response listing supported payment networks:
+<Card
+  title="View on GitHub"
+  icon="github"
+  href="https://github.com/openx402/x402-ipfs-starter-server"
+>
+  Browse the full source code
+</Card>
+
+## Step 2: Install Dependencies
+
+```bash
+npm install
+```
+
+This installs:
+- Express.js (web server)
+- ethers (blockchain interaction)
+- Other dependencies for IPFS and payment handling
+
+## Step 3: Run the Server
+
+```bash
+npm start
+```
+
+Your server is now running on `http://localhost:3000`!
+
+```
+🚀 OpenX402 IPFS Gateway running on port 3000
+📦 Serving IPFS content with x402 payments
+💰 Facilitator: https://openx402.ai/base
+```
+
+## Step 4: Test It Out
+
+### Test Without Payment
+
+Try accessing IPFS content without payment:
+
+```bash
+curl http://localhost:3000/ipfs/QmXxxx...
+```
+
+**Response: 402 Payment Required**
 
 ```json
 {
-  "networks": ["base", "xlayer"],
-  "facilitator": "openx402",
-  "version": "1.0"
+  "error": "Payment required",
+  "facilitator": "https://openx402.ai/base",
+  "amount": "0.01",
+  "network": "base",
+  "message": "Please submit payment to access this content"
 }
 ```
 
-## Step 2: Create a Simple Protected Endpoint
+This is the **402 Payment Required** HTTP status code in action! Your server is protecting the IPFS content behind a paywall.
 
-Let's create a basic server with an endpoint that requires payment.
+### Understanding the Response
 
-<CodeGroup>
-```javascript Node.js (Express)
-const express = require('express');
-const app = express();
+The 402 response tells clients:
+- **facilitator**: Where to send payment (OpenX402 on Base)
+- **amount**: How much USDC is required (0.01 USDC)
+- **network**: Which blockchain to use (Base)
 
-app.use(express.json());
+## Step 5: See How It Works
 
-// Unprotected endpoint
-app.get('/free', (req, res) => {
-  res.json({ message: 'This is free!' });
-});
+Let's look at the key code that makes this work:
 
-// Protected endpoint
-app.post('/premium', async (req, res) => {
+### The Payment Check
+
+```javascript
+app.get('/ipfs/:cid', async (req, res) => {
   const paymentProof = req.headers['x-402-payment'];
 
+  // No payment provided?
   if (!paymentProof) {
     return res.status(402).json({
       error: 'Payment required',
-      facilitator: 'https://open.x402.host'
+      facilitator: 'https://openx402.ai/base',
+      amount: '0.01',
+      network: 'base'
     });
   }
 
-  // Verify payment with OpenX402
-  const verified = await verifyPayment(paymentProof);
-
-  if (verified) {
-    res.json({ data: 'Your premium content here!' });
-  } else {
-    res.status(402).json({ error: 'Invalid payment' });
-  }
-});
-
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
+  // Verify payment with OpenX402...
 });
 ```
 
-```python Python (Flask)
-from flask import Flask, request, jsonify
-import requests
+### Payment Verification
 
-app = Flask(__name__)
+```javascript
+// Verify payment with OpenX402
+const verification = await fetch('https://open.x402.host/verify', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    proof: paymentProof,
+    network: 'base'
+  })
+});
 
-@app.route('/free')
-def free_endpoint():
-    return jsonify({"message": "This is free!"})
+const result = await verification.json();
 
-@app.route('/premium', methods=['POST'])
-def premium_endpoint():
-    payment_proof = request.headers.get('X-402-Payment')
+if (!result.valid) {
+  return res.status(402).json({ error: 'Invalid payment' });
+}
 
-    if not payment_proof:
-        return jsonify({
-            "error": "Payment required",
-            "facilitator": "https://open.x402.host"
-        }), 402
-
-    # Verify payment with OpenX402
-    verified = verify_payment(payment_proof)
-
-    if verified:
-        return jsonify({"data": "Your premium content here!"})
-    else:
-        return jsonify({"error": "Invalid payment"}), 402
-
-if __name__ == '__main__':
-    app.run(port=3000)
+// Payment verified! Serve the content
+const ipfsContent = await fetchFromIPFS(req.params.cid);
+res.send(ipfsContent);
 ```
-</CodeGroup>
 
-## Step 3: Implement Payment Verification
+That's it! Three simple steps:
+1. Check if payment was provided
+2. Verify payment with OpenX402
+3. Deliver content if valid
 
-Now implement the `verifyPayment` function that calls OpenX402's `/verify` endpoint.
+## How the Payment Flow Works
 
-<CodeGroup>
-```javascript Node.js
-async function verifyPayment(paymentProof) {
-  try {
-    const response = await fetch('https://open.x402.host/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        proof: paymentProof,
-        network: 'base'
-      })
-    });
+```mermaid
+sequenceDiagram
+    User->>Gateway: GET /ipfs/Qmxxx
+    Gateway->>User: 402 Payment Required
+    User->>Base Network: Submit USDC payment
+    Base Network->>User: Transaction confirmed
+    User->>Gateway: GET /ipfs/Qmxxx + payment proof
+    Gateway->>OpenX402: Verify payment
+    OpenX402->>Gateway: ✓ Valid
+    Gateway->>IPFS: Fetch content
+    IPFS->>Gateway: Content
+    Gateway->>User: 200 OK + IPFS content
+```
 
-    const result = await response.json();
-    return result.valid === true;
-  } catch (error) {
-    console.error('Verification error:', error);
-    return false;
-  }
+## Project Structure
+
+```
+x402-ipfs-starter-server/
+├── src/
+│   ├── server.js         # Main Express server
+│   ├── payment.js        # OpenX402 integration
+│   └── ipfs.js           # IPFS fetching logic
+├── package.json
+└── README.md
+```
+
+### Key Files
+
+**server.js** - Main application
+- Sets up Express routes
+- Handles payment checks
+- Returns 402 for unpaid requests
+
+**payment.js** - Payment verification
+- Calls OpenX402 /verify endpoint
+- Validates payment proofs
+- Handles Base network transactions
+
+**ipfs.js** - IPFS integration
+- Fetches content from IPFS
+- Caches responses
+- Handles errors
+
+## Customize It
+
+### Change the Price
+
+Edit the payment amount in `src/server.js`:
+
+```javascript
+amount: '0.01' // Change to your desired USDC price
+```
+
+### Use a Different Network
+
+Switch from Base to Solana or another chain:
+
+```javascript
+{
+  facilitator: 'https://openx402.ai/solana',
+  network: 'solana',
+  amount: '0.01'
 }
 ```
 
-```python Python
-def verify_payment(payment_proof):
-    try:
-        response = requests.post(
-            'https://open.x402.host/verify',
-            json={
-                'proof': payment_proof,
-                'network': 'base'
-            }
-        )
-        result = response.json()
-        return result.get('valid') == True
-    except Exception as e:
-        print(f'Verification error: {e}')
-        return False
+### Add Your Own Logic
+
+Add custom business logic after payment verification:
+
+```javascript
+if (result.valid) {
+  // Your custom logic here
+  await logPayment(result.transactionId);
+  await checkRateLimit(req.ip);
+  await updateAnalytics(req.params.cid);
+
+  // Then serve content
+  return serveContent();
+}
 ```
-</CodeGroup>
 
-## Step 4: Test with the Test Endpoint
+## Deploy to Production
 
-OpenX402 provides a `/test` endpoint that costs only $0.0001 USDC for development.
+The starter is production-ready and can be deployed anywhere:
+
+### Deploy to Fly.io
 
 ```bash
-# Test your integration
-curl -X POST http://localhost:3000/premium \
-  -H "X-402-Payment: YOUR_TEST_PAYMENT_PROOF"
+fly launch
+fly deploy
 ```
 
-<Tip>
-  Use the `/test` endpoint during development. It's nearly free and perfect for testing your integration.
-</Tip>
+### Deploy with Docker
 
-## Step 5: Add Settlement (Optional)
-
-For production, you may want to explicitly settle transactions:
-
-```javascript
-async function settlePayment(transactionId) {
-  const response = await fetch('https://open.x402.host/settle', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      transactionId: transactionId,
-      network: 'base'
-    })
-  });
-
-  return await response.json();
-}
-
-// Call after delivering the service
-app.post('/premium', async (req, res) => {
-  // ... verification code ...
-
-  // Deliver service
-  res.json({ data: 'Premium content' });
-
-  // Settle in background
-  await settlePayment(paymentProof.txId);
-});
+```bash
+docker build -t x402-ipfs-gateway .
+docker run -p 3000:3000 x402-ipfs-gateway
 ```
 
-## Step 6: Go to Production
+### Environment Variables
 
-When you're ready for production:
-
-1. **Switch to `/open` endpoint** ($1 USDC per transaction)
-2. **Add error handling** for network issues
-3. **Implement rate limiting** to prevent abuse
-4. **Add logging** for payment tracking
-
-```javascript
-// Production configuration
-const FACILITATOR_URL = 'https://open.x402.host';
-const ENDPOINT = '/open'; // Use /open for production
-const NETWORK = 'base';
+```bash
+PORT=3000
+FACILITATOR_URL=https://openx402.ai/base
+IPFS_GATEWAY=https://ipfs.io
 ```
 
-## Complete Example
+## Real Production Example
 
-Here's a full working example:
+This exact code is running at **ipfs.openx402.ai**, serving IPFS content to real users with real payments.
 
-```javascript
-const express = require('express');
-const fetch = require('node-fetch');
-const app = express();
+Try it:
 
-app.use(express.json());
-
-const FACILITATOR = 'https://open.x402.host';
-
-async function verifyWithOpenX402(proof) {
-  const response = await fetch(`${FACILITATOR}/verify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ proof, network: 'base' })
-  });
-  const result = await response.json();
-  return result.valid;
-}
-
-app.post('/api/data', async (req, res) => {
-  const proof = req.headers['x-402-payment'];
-
-  if (!proof) {
-    return res.status(402).json({
-      error: 'Payment required',
-      facilitator: FACILITATOR
-    });
-  }
-
-  const valid = await verifyWithOpenX402(proof);
-
-  if (!valid) {
-    return res.status(402).json({ error: 'Invalid payment' });
-  }
-
-  // Payment verified - deliver service
-  res.json({
-    data: 'Your premium data here',
-    timestamp: Date.now()
-  });
-});
-
-app.listen(3000);
+```bash
+# Returns 402 Payment Required
+curl https://ipfs.openx402.ai/ipfs/QmXxxx...
 ```
 
-## Next Steps
+## What's Next?
+
+Now that you have the starter running, explore these resources:
 
 <CardGroup cols={2}>
   <Card title="Core Concepts" icon="book" href="/concepts">
-    Understand how facilitators work
+    Learn how facilitators work
   </Card>
   <Card title="Use Cases" icon="lightbulb" href="/use-cases">
-    See what you can build
+    See what else you can build
   </Card>
   <Card title="API Reference" icon="code" href="/api-reference/introduction">
     Complete API documentation
   </Card>
-  <Card title="Supported Chains" icon="link" href="/chains">
-    Learn about Base, X Layer, and Solana
+  <Card title="Networks" icon="link" href="/networks/base">
+    Explore Base, Solana, and more
   </Card>
 </CardGroup>
 
+## Testing with Real Payments
+
+Ready to test with actual USDC payments?
+
+1. **Get a wallet** - Install MetaMask or Coinbase Wallet
+2. **Get USDC on Base** - Bridge USDC to Base network
+3. **Make a payment** - Use the /test endpoint first ($0.0001 USDC)
+4. **Include payment proof** - Add `X-402-Payment` header with proof
+
+See [/test endpoint docs](/api-reference/test) for details on testing with minimal cost.
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="Do I need a wallet to run the starter?">
+    No! The starter runs locally without any wallet. You only need a wallet when testing real payments.
+  </Accordion>
+
+  <Accordion title="How much does it cost to test?">
+    Use the `/test` endpoint which costs only $0.0001 USDC. Perfect for testing without spending real money.
+  </Accordion>
+
+  <Accordion title="Can I use this for non-IPFS content?">
+    Absolutely! The payment logic works for any API, database, or service. Replace the IPFS fetching with your own logic.
+  </Accordion>
+
+  <Accordion title="Which networks are supported?">
+    OpenX402 supports Base, Solana, X Layer, Polygon, and BSC. See [Supported Chains](/chains) for details.
+  </Accordion>
+</AccordionGroup>
+
 ## Need Help?
 
-- Check our [API documentation](/api-reference/introduction)
-- View live transactions on [X402 Scan](https://www.x402scan.com/facilitator/openx402)
-- Open an issue on [GitHub](https://github.com/openx402)
+- **GitHub Issues**: [Report bugs or ask questions](https://github.com/openx402/x402-ipfs-starter-server/issues)
+- **Community**: Follow [@openx402 on X](https://x.com/openx402)
+- **Live Demo**: Test at [ipfs.openx402.ai](https://ipfs.openx402.ai)
+
+## More Examples
+
+Looking for other use cases? Check out our [Starter Projects](/starter-projects) page for more examples and templates.
